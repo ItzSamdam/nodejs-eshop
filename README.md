@@ -1,18 +1,31 @@
-## About School Management System
+## About NodeJS Eshop API
+
+NodeJS Eshop API is a REST API for Ecommerce Application. 
+It is built with NodeJS, ExpressJS, MySQL, Prisma ORM, JWT, Passport, Multer, Nodemailer, and other libraries.
+It is a complete and fully functional Ecommerce API for Ecommerce Application.
 
 
 ### Features
-- Students Management
-- Admissions Management
-- Authentication
-- Teachers Management
-- Notices
-- Events
-- Attendance Management
-- Reports and Grades
-- Payments and Invoices
-- Roles and Permissions
+- Admin Dashboard
+    - User Management
+    - Inventory Management
+    - Product Management
+    - Order Management
+    - Order Tracking
+    - Multi Payment Gateway
+    - Invoice and Print
+    - Reports and Analytics
+    - Multi Language and Currency Support - coming soon
 
+- User Dashboard
+    - User Profile Management
+    - Order Processing and Payment
+    - Order Tracking
+    - Order History
+    - Invoice and Print
+    - Multi Language and Currency Support - coming soon
+
+- Other Features
 
 ## Changelog
 
