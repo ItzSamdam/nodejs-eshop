@@ -75,6 +75,7 @@ class CategoriesService extends BaseService {
             //upload to cloudinary
             let result = await Cloudinary.uploader.upload(file64.content!, {
                 folder: "CategoryInfo",
+                quality: 'auto', // Automatically optimize image quality
             });
             if (!result) {
                 throw new BadRequestException("Unable to upload Image");
@@ -116,7 +117,7 @@ class CategoriesService extends BaseService {
         }
     }
     
-    deleteCategory(categoryId: string) {
+    async deleteCategory(categoryId: string) {
         try {
             return prisma.category.delete({
                 where: {

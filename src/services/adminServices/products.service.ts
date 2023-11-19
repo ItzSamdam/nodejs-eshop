@@ -3,6 +3,7 @@ import prisma from "../../utils/database.utils";
 import { Prisma } from "@prisma/client";
 import BadRequestException from "../../exceptions/BadRequestException";
 import DatabaseException from "../../exceptions/DatabaseException";
+import NotFoundException from "../../exceptions/NotFoundException";
 import * as path from "path";
 import Cloudinary from "../../config/cloudinary.config";
 import DatauriParser from "datauri/parser";
@@ -29,6 +30,32 @@ class ProductService extends BaseService {
         }
     }
 
+    async getProductsByCategory(categoryId: string) {
+        try {
+            const category = await prisma.category.findUnique({
+                where: { id: categoryId }
+            })
+            if (!category) {
+                throw new NotFoundException("Category doesnt exist")
+            }
+            return await prisma.products.findMany({
+                where: {
+                    categoryId: categoryId
+                },
+                include: {
+                    category: true,
+                    productImages: true
+                }
+            });
+        } catch (error) {
+            if (error instanceof Prisma.PrismaClientKnownRequestError) {
+                throw new DatabaseException(error);
+            }
+            throw new BadRequestException((error as Error).message);
+        }
+    }
+
+
     async getProductById(productId: string) {
         try {
             return await prisma.products.findUnique({
@@ -48,12 +75,31 @@ class ProductService extends BaseService {
         }
     }
 
-    async createProducts() {
+    async createProducts(name: string, description: string, price: number, discount: number, categoryId: string, sku: string, quantity: number, inStock: boolean, isFeatured: boolean) {
         //create category
         try {
+            //check if category exists
+            const category = await prisma.category.findUnique({
+                where: { id: categoryId }
+            });
+            if (!category) {
+                throw new BadRequestException("Category does not exist");
+            }
             return await prisma.products.create({
                 data: {
-
+                    name,
+                    description,
+                    price,
+                    discount,
+                    category: {
+                        connect: {
+                            id: categoryId
+                        }
+                    },
+                    sku,
+                    quantity,
+                    inStock,
+                    isFeatured,
                 }
             });
 
@@ -63,56 +109,35 @@ class ProductService extends BaseService {
             }
             throw new BadRequestException((error as Error).message);
         }
-
     }
 
-    async uploadCategoryImage(categoryId: string, image: any) {
+    async updateProduct(productId: string, name: string, description: string, price: number, discount: number, categoryId: string, sku: string, quantity: number, inStock: boolean, isFeatured: boolean) {
         try {
-            //check if imageId exists for student if yes delete from cloudinary
+            //check if category exists
             const category = await prisma.category.findUnique({
-                where: { id: categoryId }, select: { imageId: true },
+                where: { id: categoryId }
             });
-            if (category?.imageId) {
-                await Cloudinary.uploader.destroy(category.imageId);
+            if (!category) {
+                throw new BadRequestException("Category does not exist");
             }
-            //upload avatar
-            const extName = path.extname(image.originalname).toString();
-            const file64 = parser.format(extName, image.buffer);
-
-            //upload to cloudinary
-            let result = await Cloudinary.uploader.upload(file64.content!, {
-                folder: "CategoryInfo",
-            });
-            if (!result) {
-                throw new BadRequestException("Unable to upload Image");
-            }
-
-            return await prisma.category.update({
+            return await prisma.products.update({
                 where: {
-                    id: categoryId
-                },
-                data: {
-                    image: result?.secure_url,
-                    imageId: result?.public_id
-                }
-            });
-        } catch (error) {
-            if (error instanceof Prisma.PrismaClientKnownRequestError) {
-                throw new DatabaseException(error);
-            }
-            throw new BadRequestException((error as Error).message);
-        }
-    }
-
-    async updateCategory(categoryId: string, name: string, description?: string) {
-        try {
-            return await prisma.category.update({
-                where: {
-                    id: categoryId
+                    id: productId
                 },
                 data: {
                     name,
-                    description
+                    description,
+                    price,
+                    discount,
+                    category: {
+                        connect: {
+                            id: categoryId
+                        }
+                    },
+                    sku,
+                    quantity,
+                    inStock,
+                    isFeatured,
                 }
             });
         } catch (error) {
@@ -123,11 +148,54 @@ class ProductService extends BaseService {
         }
     }
 
-    deleteCategory(categoryId: string) {
+    async uploadProductImage(productId: string, image: any) {
         try {
-            return prisma.category.delete({
+            for (const imageFile of image) {
+                const extName = path.extname(imageFile.originalname).toString();
+                const file64 = parser.format(extName, imageFile.buffer);
+
+                // Upload to Cloudinary
+                const result = await Cloudinary.uploader.upload(file64.content, {
+                    folder: "ProductInfo",
+                    quality: 'auto', // Automatically optimize image quality
+                });
+
+                if (!result || !result.secure_url || !result.public_id) {
+                    throw new BadRequestException("Unable to upload Image");
+                }
+
+                // Update product with image URL and image ID
+                await prisma.productImages.create({
+                    data: {
+                        productId,
+                        image: result.secure_url,
+                        imageId: result.public_id
+                    }
+                });
+            }
+            //handle multiple uploads of array of images 
+            
+            return await prisma.products.findUnique({
                 where: {
-                    id: categoryId
+                    id: productId
+                },
+                include: {
+                    productImages: true
+                }
+            });
+        } catch (error) {
+            if (error instanceof Prisma.PrismaClientKnownRequestError) {
+                throw new DatabaseException(error);
+            }
+            throw new BadRequestException((error as Error).message);
+        }
+    }
+
+    deleteProduct(productId: string) {
+        try {
+            return prisma.products.delete({
+                where: {
+                    id: productId
                 }
             });
         } catch (error) {
