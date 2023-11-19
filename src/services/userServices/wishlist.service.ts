@@ -26,10 +26,7 @@ class UserWishlistService extends BaseService {
     async getWishlist(userId: string, wishlistId: string) {
         try {
             return await prisma.wishlist.findUnique({
-                where: { id: wishlistId, userId: userId },
-                include: {
-                    wishlistItem: true
-                }
+                where: { id: wishlistId, userId: userId }
             });
         } catch (error) {
             if (error instanceof Prisma.PrismaClientKnownRequestError) {
@@ -41,16 +38,9 @@ class UserWishlistService extends BaseService {
 
     async deleteWishlist(userId: string, wishlistId: string) {
         try {
-            const wishlist = await prisma.wishlist.findUnique({
+            return await prisma.wishlist.delete({
                 where: { id: wishlistId, userId: userId }
             });
-            const wishlistItem = await prisma.wishlistItem.deleteMany({
-                where: { wishlistId: wishlistId }
-            })
-            if (!wishlist && !wishlistItem) {
-                return false
-            }
-            return true;
             
         } catch (error) {
             if (error instanceof Prisma.PrismaClientKnownRequestError) {
@@ -60,8 +50,30 @@ class UserWishlistService extends BaseService {
         }
     }
 
-    async addWishlist() {
-        
+    async addWishlist(userId: string, productId: string) {
+        try {
+            //check product exist before now
+            const existing = await prisma.wishlist.findFirst({
+                where: {
+                    productId
+                }
+            });
+            if (existing) {
+                return existing;
+            }
+            return await prisma.wishlist.create({
+                data: {
+                    userId,
+                    productId
+                }
+            });
+
+        } catch (error) {
+            if (error instanceof Prisma.PrismaClientKnownRequestError) {
+                throw new DatabaseException(error);
+            }
+            throw new BadRequestException((error as Error).message);
+        }
     }
 }
 
