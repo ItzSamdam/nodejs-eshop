@@ -11,6 +11,7 @@ model Admin {
   id        String   @id @default(uuid())
   email     String   @unique
   fullname  String?
+  phoneNo   String?
   password  String   @map("password_hash")
   username  String   @unique
   role      String   @default("ADMIN")
